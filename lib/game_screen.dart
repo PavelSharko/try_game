@@ -138,6 +138,34 @@ class _GameScreenState extends State<GameScreen> {
         child: SafeArea( // Ensure UI doesn't overlap system bars
           child: Column(
             children: [
+              // 0. Top Buy Button
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Provide a visual feedback or console log for now
+                    print("Buy button pressed");
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD700), // Gold color
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 5,
+                  ),
+                  child: const Text(
+                    'КУПИТЬ',
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+              
               // 1. Feedback Area (Top)
               Expanded(
                 flex: 2,
