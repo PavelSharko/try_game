@@ -1,34 +1,6 @@
-import 'dart:async';
+import 'dart:async'; // New: Async for Timer
+import 'dart:math';
 import 'package:flutter/material.dart';
-
-// 1. Model for Animal
-class Animal {
-  final String name;
-  final String sound;
-  final IconData icon;
-  final Color color;
-
-  const Animal({
-    required this.name,
-    required this.sound,
-    required this.icon,
-    required this.color,
-  });
-}
-
-// 2. Data: List of available animals
-const List<Animal> availableAnimals = [
-  Animal(name: 'Собака', sound: 'ГАВ!', icon: Icons.pets, color: Colors.orange),
-  Animal(name: 'Кот', sound: 'МЯУ!', icon: Icons.cruelty_free, color: Colors.blue),
-  Animal(name: 'Корова', sound: 'МУ-У!', icon: Icons.grass, color: Colors.green),
-  Animal(name: 'Овца', sound: 'БЕ-Е!', icon: Icons.waves, color: Colors.lightGreen),
-  Animal(name: 'Лошадь', sound: 'ИГО-ГО!', icon: Icons.bedroom_baby, color: Colors.brown),
-  Animal(name: 'Свинья', sound: 'ХРЮ!', icon: Icons.savings, color: Colors.pink),
-  Animal(name: 'Петух', sound: 'КУ-КА-РЕ-КУ!', icon: Icons.wb_sunny, color: Colors.red),
-  Animal(name: 'Утка', sound: 'КРЯ!', icon: Icons.water, color: Colors.teal),
-  Animal(name: 'Лев', sound: 'Р-Р-Р!', icon: Icons.emoji_nature, color: Colors.amber),
-  Animal(name: 'Обезьяна', sound: 'У-У-А-А!', icon: Icons.emoji_people, color: Colors.purple),
-];
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -38,274 +10,296 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  // State: Currently selected animals
-  Animal _leftAnimal = availableAnimals[0]; // Dog
-  Animal _rightAnimal = availableAnimals[1]; // Cat
-
-  // Animation State
-  String _displayMessage = '';
-  Color _messageColor = Colors.white;
+  // Game State
+  int _score = 0;
+  late int _currentCardValue;
+  late String _currentCardSuit;
+  // New: Next Card State
+  late int _nextCardValue;
+  late String _nextCardSuit;
+  
+  String _trumpSuit = ''; // New: Trump Suit State
+  bool _isGameOver = false;
+  
+  // New: Timer State
   Timer? _timer;
+  int _timeLeft = 60;
+  String _gameOverMessage = '';
 
-  void _playSound(String sound, Color color) {
-    _timer?.cancel();
+  final Random _random = Random();
+  // New: Restricted suits (Bubny, Piki, Kresti)
+  final List<String> _suits = ['Бубны', 'Пики', 'Крести'];
+
+  @override
+  void initState() {
+    super.initState();
+    _startNewGame();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Prevent memory leaks
+    super.dispose();
+  }
+
+  void _startNewGame() {
+    _timer?.cancel(); // Cancel existing timer
     setState(() {
-      _displayMessage = sound;
-      _messageColor = color;
+      _score = 0;
+      _isGameOver = false;
+      _timeLeft = 60; // Reset timer
+      _gameOverMessage = '';
+      
+      // New: Select random trump
+      _trumpSuit = _suits[_random.nextInt(_suits.length)];
+      _generateCurrentCard();
+      _generateNextCard();
+      
+      // Start Timer
+      _startTimer();
     });
+  }
 
-    _timer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_timeLeft > 0) {
         setState(() {
-          _displayMessage = '';
+          _timeLeft--;
+        });
+      } else {
+        // Time is up!
+        _timer?.cancel();
+        setState(() {
+          _isGameOver = true;
+          _gameOverMessage = 'Время вышло!';
         });
       }
     });
   }
 
-  // Logic to show selection menu
-  void _showAnimalSelection(bool isLeft) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Выберите животное для ${isLeft ? "левой" : "правой"} кнопки',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              SizedBox(
-                height: 300,
-                child: ListView.builder(
-                  itemCount: availableAnimals.length,
-                  itemBuilder: (context, index) {
-                    final animal = availableAnimals[index];
-                    return ListTile(
-                      leading: Icon(animal.icon, color: animal.color, size: 32),
-                      title: Text(animal.name, style: const TextStyle(fontSize: 18)),
-                      subtitle: Text(animal.sound),
-                      onTap: () {
-                        setState(() {
-                          if (isLeft) {
-                            _leftAnimal = animal;
-                          } else {
-                            _rightAnimal = animal;
-                          }
-                        });
-                        Navigator.pop(context); // Close menu
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  void _generateCurrentCard() {
+    _currentCardValue = _random.nextInt(13) + 2; // 2 to 14
+    _currentCardSuit = _suits[_random.nextInt(_suits.length)];
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  void _generateNextCard() {
+    _nextCardValue = _random.nextInt(13) + 2; // 2 to 14
+    _nextCardSuit = _suits[_random.nextInt(_suits.length)];
+  }
+
+  String _getCardName(int value, String suit) {
+    String valueStr;
+    switch (value) {
+      case 11:
+        valueStr = 'Валет';
+        break;
+      case 12:
+        valueStr = 'Дама';
+        break;
+      case 13:
+        valueStr = 'Король';
+        break;
+      case 14:
+        valueStr = 'Туз';
+        break;
+      default:
+        valueStr = value.toString();
+    }
+    return '$valueStr $suit';
+  }
+
+  void _handleGuess(bool isHigher) {
+    // Logic: Compare NEXT (state) vs CURRENT (state)
+    bool nextIsTrump = _nextCardSuit == _trumpSuit;
+    bool currentIsTrump = _currentCardSuit == _trumpSuit;
+    
+    bool isNextActuallyHigher = false;
+    bool isEqual = false;
+
+    if (nextIsTrump && !currentIsTrump) {
+      // Trump is always higher than non-trump
+      isNextActuallyHigher = true;
+    } else if (!nextIsTrump && currentIsTrump) {
+      // Non-trump is always lower than trump
+      isNextActuallyHigher = false;
+    } else {
+      // Both are trump OR Both are non-trump -> Compare values
+      if (_nextCardValue > _currentCardValue) {
+        isNextActuallyHigher = true;
+      } else if (_nextCardValue == _currentCardValue) {
+        isEqual = true;
+      }
+    }
+
+    bool isCorrect = false;
+    if (isEqual) {
+      isCorrect = true; // Equal counts as correct
+    } else if (isHigher && isNextActuallyHigher) {
+      isCorrect = true;
+    } else if (!isHigher && !isNextActuallyHigher) {
+      isCorrect = true;
+    }
+
+    setState(() {
+      if (isCorrect) {
+        // New: Bonus Logic - +10 only if BOTH are Trump
+        if (_currentCardSuit == _trumpSuit && _nextCardSuit == _trumpSuit) {
+             _score += 10;
+        } else {
+             _score++;
+        }
+        
+        // Move Next to Current
+        _currentCardValue = _nextCardValue;
+        _currentCardSuit = _nextCardSuit;
+        
+        // Generate NEW Next
+        _generateNextCard();
+      } else {
+        _isGameOver = true;
+        _gameOverMessage = 'Неверно!';
+        _timer?.cancel(); // Stop timer on loss
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2E0249),
-              Color(0xFF570A57),
-            ],
-          ),
-        ),
-        child: SafeArea( // Ensure UI doesn't overlap system bars
-          child: Column(
-            children: [
-              // 0. Top Buy Button
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Provide a visual feedback or console log for now
-                    print("Buy button pressed");
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFD700), // Gold color
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 5,
-                  ),
-                  child: const Text(
-                    'КУПИТЬ',
-                    style: TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Title
+            const Text(
+              'Карточный Пророк',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                letterSpacing: 2.0,
               ),
-              
-              // 1. Feedback Area (Top)
-              Expanded(
-                flex: 2,
-                child: Center(
-                  child: AnimatedOpacity(
-                    opacity: _displayMessage.isNotEmpty ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 100),
-                    child: Text(
-                      _displayMessage,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 64, // Bigger text
-                        fontWeight: FontWeight.w900,
-                        color: _messageColor,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 10.0,
-                            color: Colors.black.withOpacity(0.5),
-                            offset: const Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            ),
+            const SizedBox(height: 10),
+            
+            // New: Timer Display
+            Text(
+              'Время: $_timeLeft',
+              style: TextStyle(
+                fontSize: 24, 
+                fontWeight: FontWeight.bold,
+                color: _timeLeft <= 10 ? Colors.red : Colors.black, // Red warning
               ),
-              
-              // 2. Main Game Area (Center Buttons)
-              Expanded(
-                flex: 3,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // LEFT BUTTON
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: _AnimalGameButton(
-                          animal: _leftAnimal,
-                          onPressed: () => _playSound(_leftAnimal.sound, _leftAnimal.color),
-                          onLongPress: () => _showAnimalSelection(true), // Long press to change
-                        ),
-                      ),
-                    ),
-                    // RIGHT BUTTON
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: _AnimalGameButton(
-                          animal: _rightAnimal,
-                          onPressed: () => _playSound(_rightAnimal.sound, _rightAnimal.color),
-                          onLongPress: () => _showAnimalSelection(false), // Long press to change
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 10),
+            
+            // New: Trump Display
+            Text(
+              'Козырь: $_trumpSuit',
+              style: const TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.bold, 
+                color: Colors.redAccent
               ),
+            ),
+            const SizedBox(height: 20),
 
-              // 3. Helper Hint / Quick Menu (Bottom)
+            if (_isGameOver) ...[
+               Text(
+                'Игра Окончена! $_gameOverMessage',
+                style: const TextStyle(fontSize: 32, color: Colors.red, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+               Text(
+                'Итоговый счет: $_score',
+                style: const TextStyle(fontSize: 24, color: Colors.black54),
+              ),
+              const SizedBox(height: 30),
+             
+              ElevatedButton(
+                onPressed: _startNewGame,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                ),
+                child: const Text('НОВАЯ ИГРА'),
+              ),
+            ] else ...[
+              // Score
+              Text(
+                'Счет: $_score',
+                style: const TextStyle(fontSize: 24, color: Colors.black54),
+              ),
+              const SizedBox(height: 40),
+
+              // Current Card Display
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                child: Column(
-                  children: [
-                    const Text(
-                      "Нажмите, чтобы услышать звук\nУдерживайте, чтобы сменить животное",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 20),
-                    // Quick Swap Buttons (Visual cue)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () => _showAnimalSelection(true),
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text("Левый"),
-                        ),
-                        const SizedBox(width: 20),
-                        ElevatedButton.icon(
-                          onPressed: () => _showAnimalSelection(false),
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text("Правый"),
-                        ),
-                      ],
-                    )
-                  ],
+                padding: const EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.black, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _getCardName(_currentCardValue, _currentCardSuit),
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 60),
+
+              // Input Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _GameButton(
+                    label: '[МЕНЬШЕ]',
+                    onPressed: () => _handleGuess(false),
+                  ),
+                  const SizedBox(width: 20),
+                  _GameButton(
+                    label: '[БОЛЬШЕ]',
+                    onPressed: () => _handleGuess(true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              // New: Cheat Display (Next Card)
+              Text(
+                'Следующая карта будет: ${_getCardName(_nextCardValue, _nextCardSuit)}',
+                style: const TextStyle(
+                  fontSize: 16, 
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _AnimalGameButton extends StatelessWidget {
-  final Animal animal;
+class _GameButton extends StatelessWidget {
+  final String label;
   final VoidCallback onPressed;
-  final VoidCallback onLongPress;
 
-  const _AnimalGameButton({
-    required this.animal,
-    required this.onPressed,
-    required this.onLongPress,
-  });
+  const _GameButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPress: onLongPress,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: animal.color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          elevation: 10,
-          padding: EdgeInsets.zero, // Use Container for padding
-        ),
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(animal.icon, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                animal.name.toUpperCase(),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)), // Square corners
       ),
+      child: Text(label, style: const TextStyle(fontSize: 18)),
     );
   }
 }

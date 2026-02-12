@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 import 'game_screen.dart';
 
 void main() {
-  runApp(const AliasGameApp());
+  runApp(const CardProphetApp());
 }
 
-class AliasGameApp extends StatelessWidget {
-  const AliasGameApp({super.key});
+class CardProphetApp extends StatelessWidget {
+  const CardProphetApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Alias Game',
+      title: 'Карточный Пророк',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6200EE), // Vibrant Purple
-          brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: const ColorScheme.light(
+          primary: Colors.black,
+          onPrimary: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black,
         ),
         useMaterial3: true,
-        fontFamily: 'Roboto',
+        fontFamily: 'Courier New', // Monospace for minimalist feel
       ),
       home: const GameScreen(),
     );
